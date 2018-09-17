@@ -1,0 +1,70 @@
+---
+- name: Call Satellite API to find tailoring file digest
+  uri:
+    url: "https://{{ foreman_proxy_server }}/api/v2/compliance/tailoring_files/{{ item.tailoring_file_id }}"
+    return_contents: yes
+    method: GET
+    user: "{{ satellite_username }}"
+    password: "{{ satellite_password }}"
+    force_basic_auth: yes
+    validate_certs: no
+  register: json_response_tailoring_files
+  tags:
+    - os
+    - scap_client
+
+- name: Store the custom profile id in profile_id
+  set_fact:
+    profile_id: "{{ tailoring_item.profile_id }}"
+  with_items: "{{ json_response_tailoring_files.json.tailoring_file_profiles }}"
+  loop_control:
+    loop_var: tailoring_item
+  tags:
+    - os
+    - scap_client
+
+- name: List all SCAP Contents
+  uri:
+    url: "https://{{ foreman_proxy_server }}/api/v2/compliance/scap_contents/{{ item.scap_content_id }}"
+    return_contents: yes
+    method: GET
+    user: "{{ satellite_username }}"
+    password: "{{ satellite_password }}"
+    force_basic_auth: yes
+    validate_certs: no
+  register: json_response_scap_contents
+  tags:
+    - os
+    - scap_client
+
+- name: Capture the SCAP contents profile name
+  set_fact:
+    scap_content_profile: "{{ scap_contents_item.profile_id }}"
+  with_items: "{{ json_response_scap_contents.json.scap_content_profiles }}"
+  when: scap_contents_item.id == item.scap_content_profile_id
+  loop_control:
+    loop_var: scap_contents_item
+  tags:
+    - os
+    - scap_client
+
+- name: Add result to openscap_policies
+  set_fact:
+    policies: "{{ policies | default ([]) | union ([{ 'id': item.id, 'tailoring_file_digest':  json_response_tailoring_files.json.digest, 'scap_content_profile': scap_content_profile, 'profile_id': profile_id }]) }}"
+  tags:
+    - os
+    - scap_client
+
+- name: Configure execution crontab
+  cron:
+    name: "Openscap Execution"
+    cron_file: 'foreman_openscap_client'
+    job: '/usr/bin/foreman_scap_client {{ item.id }} > /dev/null'
+    weekday: "{{ crontab_weekdays }}"
+    hour: "{{ crontab_hour }}"
+    minute: "{{ crontab_minute }}"
+    user: root
+  tags:
+    - os
+    - scap_client
+

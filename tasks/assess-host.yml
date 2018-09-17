@@ -1,0 +1,28 @@
+---
+- name: Display Tailoring Files
+  debug: var="{{item.tailoring_file_id}}"
+  tags:
+    - os
+    - scap_client
+
+- name: Capture policy details in a json
+  uri:
+    url: "https://{{satellite_server_fqdn}}/api/v2/compliance/policies/{{item.id}}"
+    method: GET
+    user: "{{satellite_username}}"
+    password:  "{{satellite_password}}"
+    force_basic_auth: yes
+    body_format: json
+    validate_certs: no
+  register: satellite_policy
+  tags:
+    - os
+    - scap_client
+
+- name: Construct data once Hostgroup is matched
+  include: construct-data-for-template.yml
+  when: json_response_host.json.results[0].hostgroup_title in satellite_policy.hostgroups
+  tags:
+    - os
+    - scap_client
+

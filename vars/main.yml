@@ -1,0 +1,10 @@
+---
+foreman_proxy_server: "{{ satellite_server_fqdn }}"
+foreman_proxy_port: 9090
+crontab_weekdays: "{{ scap_scan_weekday }}"
+crontab_hour: "{{ scap_scan_hour }}"
+crontab_minute: "{{ scap_scan_minute }}"
+
+ca_file: /etc/rhsm/ca/katello-server-ca.pem
+host_certificate: /etc/pki/consumer/cert.pem
+host_private_key: /etc/pki/consumer/key.pem

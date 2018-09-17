@@ -1,0 +1,75 @@
+---
+- name: Install openscap client packages
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - openscap-scanner
+    - rubygem-foreman_scap_client
+    - scap-security-guide
+  tags:
+    - os
+    - scap_client
+
+# Find my Hostgroup using my hostname
+- name: Find my Hostgroup
+  uri:
+    url: "https://{{ satellite_server_fqdn }}/api/hosts?search={{ ansible_hostname }}"
+    return_contents: yes
+    method: GET
+    user: "{{ satellite_username }}"
+    password: "{{ satellite_password }}"
+    force_basic_auth: yes
+    validate_certs: no
+  register: json_response_host
+  tags:
+    - os
+    - scap_client
+
+# Knowing my hostgroup, I can iterate for all Satellite policies, configuring those that apply to my Hostgroup
+- name: Capture Satellite's policies in a json
+  uri:
+    url: "https://{{ satellite_server_fqdn }}/api/v2/compliance/policies"
+    method: GET
+    user: "{{ satellite_username }}"
+    password: "{{ satellite_password }}"
+    force_basic_auth: yes
+    body_format: json
+  register: satellite_policy_list
+  tags:
+    - os
+    - scap_client
+
+- name: Display Satellite policies
+  debug: var=satellite_policy_list.json.results
+  tags:
+    - os
+    - scap_client
+
+- name: Define a blank starting policies list
+  set_fact:
+    policies: []
+  tags:
+    - os
+    - scap_client
+
+- name: Assess each Satellite policy to see if it is relevant to this host
+  include: assess-host.yml
+  with_items: "{{ satellite_policy_list.json.results }}"
+  tags:
+    - os
+    - scap_client
+
+- name: Apply openscap client configuration template
+  template:
+    src: openscap_client_config.yaml.j2
+    dest: /etc/foreman_scap_client/config.yaml
+    mode: 0644
+    owner: root
+    group: root
+  tags:
+    - os
+    - scap_client
+
+
+
