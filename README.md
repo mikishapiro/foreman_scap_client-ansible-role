@@ -16,30 +16,7 @@ RPM Repositories have to be enabled and containing required packages.
 
 ### Required vars to be overwritten
 
-- `satellite_server`: Used to obtain policy parameters
+- `foreman_proxy_server`: Used to obtain policy parameters
 - `satellite_username`: Used to obtain policy parameters
 - `satellite_password`: Used to obtain policy parameters
-- `capsule_server`: Used to configure openscap client config.yaml file
-- `capsule_port`: Used to configure openscap client config.yaml file
-- `policy_name`: Name of the SCAP Policy to be configured
 
-## Example playbook
-
-```yml
----
-- name: openscap client
-  hosts: <<host list>>
-  remote_user: <<user>>
-  gather_facts: true
-  become: yes
-  become_user: root
-  become_method: sudo
-  vars:
-    satellite_server: satellite.example.com
-    satellite_username`: admin
-    satellite_password`: verycomplexpassword
-    capsule_server`: capsule.example.com
-    policy_name`: 'rhel7-pci'
-  roles:
-        - ansible-ipaRegister
-```
